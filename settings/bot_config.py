@@ -13,7 +13,7 @@ class Config:
     tg_bot: TgBot
 
 
-def load_config(path: str | None = None) -> Config:
+def load_credentials(path: str | None = None) -> Config:
     """
     Создаем функцию, которая будет читать файл .env и возвращать экземпляр
     класса Config с заполненными полями token

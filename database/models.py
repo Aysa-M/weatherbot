@@ -7,6 +7,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
 
+# Базовый класс для декларативных определений классов, т.е. данная функция
+# позволяет нам определять таблицы и модели одновременно.
 Base = declarative_base()
 
 
