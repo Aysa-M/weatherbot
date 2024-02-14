@@ -1,16 +1,16 @@
-from email import message
-import math
 from aiogram import F, Router
 from aiogram.filters import CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import default_state, State
-from aiogram.types import CallbackQuery, Message, ReplyKeyboardMarkup
+from aiogram.types import (CallbackQuery, Message, ReplyKeyboardMarkup,
+                           InlineKeyboardMarkup)
 
 from api_requests import request
-from database.orm import (add_user, get_reports, set_user_city,
-                          create_report, get_user_location)
+from database.models import WeatherReports
+from database.orm import (add_user, set_user_city, create_report,
+                          get_user_location, get_report_by_id)
 from handlers.states import ChoicePlace, ChoiceUserPlace
-from keyboards.keyboard import main_menu, menu_answer, report_inline
+from keyboards import keyboard, navigation
 from lexicon import lexicon_ru
 
 
@@ -27,7 +27,7 @@ async def start_message(message: Message):
     add_user(message.from_user.id)
     text: str = (f'{message.from_user.first_name}'
                  f'{lexicon_ru.CMD_RU["/start"]}')
-    markup: ReplyKeyboardMarkup = await main_menu()
+    markup: ReplyKeyboardMarkup = await keyboard.main_menu()
     await message.answer(text, reply_markup=markup)
 
 
@@ -40,7 +40,7 @@ async def menu_message(message: Message):
     """
     text: str = (f'{message.from_user.first_name}'
                  f'{lexicon_ru.LEXICON_RU[lexicon_ru.menu]}')
-    await message.answer(text, reply_markup=await main_menu())
+    await message.answer(text, reply_markup=await keyboard.main_menu())
 
 
 @usrouter.message(F.text == lexicon_ru.my_location, StateFilter(default_state))
@@ -53,7 +53,7 @@ async def get_myplace_weather(message: Message):
     user_loc = get_user_location(message.from_user.id)
     if user_loc is None:
         await message.answer(lexicon_ru.absence_user_city,
-                             reply_markup=await main_menu())
+                             reply_markup=await keyboard.main_menu())
         return
     data = request.get_weather_data(user_loc)
     create_report(
@@ -65,7 +65,7 @@ async def get_myplace_weather(message: Message):
                     f"Feels like: {data['feels_like']} C\n"
                     f"Wind: {data['wind_speed']} m/sec\n"
                     f"Pressure: {data['pressure_mm']} mm")
-    await message.answer(weather, reply_markup=await main_menu())
+    await message.answer(weather, reply_markup=await keyboard.main_menu())
 
 
 @usrouter.message(F.text == lexicon_ru.other_location,
@@ -79,7 +79,7 @@ async def set_any_location(message: Message, state: FSMContext):
         state (State): waiting for the location name input
     """
     await message.answer(lexicon_ru.set_location,
-                         reply_markup=await main_menu())
+                         reply_markup=await keyboard.main_menu())
     await state.set_state(ChoicePlace.any_location)
 
 
@@ -107,7 +107,7 @@ async def chosen_any_location(message: Message, state: FSMContext):
                  f"Feels like: {data['feels_like']} C\n"
                  f"Wind: {data['wind_speed']} m/sec\n"
                  f"Pressure: {data['pressure_mm']} mm")
-    await message.answer(text, reply_markup=await main_menu())
+    await message.answer(text, reply_markup=await keyboard.main_menu())
     await state.clear()
 
 
@@ -119,7 +119,7 @@ async def get_user_reports(message: Message):
     Args:
         message (Message): message object from update
     """
-    inline_markup = await report_inline(message.from_user.id)
+    inline_markup = await navigation.history_btn_inline(message.from_user.id)
     await message.answer(
         lexicon_ru.LEXICON_RU[lexicon_ru.history],
         reply_markup=inline_markup)
@@ -152,15 +152,48 @@ async def process_forward_inlbtn(callback: CallbackQuery, state: FSMContext):
     await state.update_data(current_pg=data['current_pg'])
     # Если пользователь нажал кнопку вперед
     if forward_btn == 'next':
-        markup = await report_inline(callback.from_user.id, data['current_pg'])
+        kb_builder_rep, total_pages = await navigation.report_inline(
+            callback.from_user.id, data['current_pg'])
+        markup = await navigation.next_page(
+            data['current_pg'], kb_builder_rep, total_pages)
         await callback.message.edit_reply_markup(reply_markup=markup)
 
 
-@usrouter.callback_query(lambda callback_query: 'previous'
+@usrouter.callback_query(lambda callback_query: 'prev'
                          in callback_query.data)
 async def process_prev_inlbtn(callback: CallbackQuery, state: FSMContext):
     if callback.data == 'None':
         return
+    prev_btn, prev_pg = callback.data.split('_')
+    data = await state.get_data()
+    data['current_pg'] = int(prev_pg)
+    await state.update_data(current_pg=data['current_pg'])
+    if prev_btn == 'prev':
+        kb_builder_rep, total_pages = await navigation.report_inline(
+            callback.from_user.id, data['current_pg'])
+        markup = await navigation.previous_page(
+            data['current_pg'], kb_builder_rep, total_pages)
+        await callback.message.edit_reply_markup(reply_markup=markup)
+
+
+@usrouter.callback_query(lambda callback_query: 'report'
+                         in callback_query.data)
+async def process_btn_report(callback: CallbackQuery, state: FSMContext):
+    rep_btn, rep_id = callback.data.split('_')
+    if callback.data == 'None':
+        return
+    if rep_btn == 'report':
+        report: WeatherReports = get_report_by_id(int(rep_id))
+        markup: InlineKeyboardMarkup = await navigation.report_btn_inline(
+            rep_id)
+        await callback.message.edit_text(
+            text=("Данные по запросу:\n"
+                  f"Населенный пункт: {report.city}\n"
+                  f'Температура: {report.temp} C\n'
+                  f'Ощущается как: {report.feels_like} C\n'
+                  f'Скорость ветра: {report.wind_speed} м/c\n'
+                  f'Давление: {report.pressure_mm} mm'),
+            reply_markup=markup)
 
 
 @usrouter.message(F.text == lexicon_ru.set_own_location,
@@ -175,7 +208,7 @@ async def set_user_location(message: Message, state: State):
     """
     await message.answer(
         lexicon_ru.LEXICON_RU[lexicon_ru.set_own_location],
-        reply_markup=await menu_answer())
+        reply_markup=await keyboard.menu_answer())
     await state.set_state(ChoiceUserPlace.user_location)
 
 
@@ -195,5 +228,5 @@ async def chosen_user_location(message: Message, state: FSMContext):
     user_data = await state.get_data()
     set_user_city(message.from_user.id, user_data.get('user_location'))
     text: str = f'{user_data.get("user_location")} установлен как "свой" город'
-    await message.answer(text, reply_markup=await main_menu())
+    await message.answer(text, reply_markup=await keyboard.main_menu())
     await state.clear()

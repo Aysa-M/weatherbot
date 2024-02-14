@@ -10,6 +10,14 @@ SESSION = Session()
 
 
 def get_user(tg_id: int) -> Users | None:
+    """
+    Ищет экземпляр класса Users с указанным идентификатором
+    в телеграме
+    Args:
+        tg_id (int): id telegram user
+    Returns:
+        Users | None: экземпляр класса Users
+    """
     return SESSION.query(Users).filter(Users.tg_id == tg_id).first()
 
 
@@ -26,7 +34,7 @@ def add_user(tg_id: int) -> None:
         SESSION.commit()
 
 
-def set_user_city(tg_id: int, location: str):
+def set_user_city(tg_id: int, location: str) -> None:
     """
     Запись и обработка ввода родного города для пользователя
     Args:
@@ -47,7 +55,8 @@ def get_user_location(tg_id: int) -> str:
 
 
 def create_report(tg_id: int, temp: int, feels_like: int,
-                  wind_speed: int, pressure_mm: int, location: str):
+                  wind_speed: int, pressure_mm: int,
+                  location: str) -> None:
     """
     Запись отчета в БД
     """
@@ -59,8 +68,21 @@ def create_report(tg_id: int, temp: int, feels_like: int,
     SESSION.commit()
 
 
-def get_reports(tg_id: int):
+def get_reports(tg_id: int) -> WeatherReports | None:
     """
     Получаем все запрошенные отчеты по погоде пользователя
     """
     return get_user(tg_id).reports
+
+
+def get_report_by_id(rep_id: int) -> WeatherReports | None:
+    """
+    Ищет экземпляр класса WeatherReports с указанным идентификатором
+    в телеграме
+    Args:
+        rep_id (int): идентификатор отчета, хранящийся в БД
+    Returns:
+        WeatherReports | None: экземпляр класса WeatherReports
+    """
+    return SESSION.query(WeatherReports).filter(
+        WeatherReports.id == rep_id).first()

@@ -3,6 +3,11 @@ from dataclasses import dataclass
 from environs import Env
 
 
+CONST_1: int = 1
+CONST_2: int = 2
+CONV_DISPLAY: int = 4
+
+
 @dataclass
 class TgBot:
     token: str
