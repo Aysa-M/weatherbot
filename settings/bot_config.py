@@ -3,6 +3,10 @@ from dataclasses import dataclass
 from environs import Env
 
 
+env: Env = Env()
+env.read_env()
+ADMIN = env('ADMIN_ID')
+
 CONST_1: int = 1
 CONST_2: int = 2
 CONV_DISPLAY: int = 4
@@ -11,6 +15,7 @@ CONV_DISPLAY: int = 4
 @dataclass
 class TgBot:
     token: str
+    admin_id: int
 
 
 @dataclass
@@ -27,4 +32,5 @@ def load_credentials(path: str | None = None) -> Config:
     """
     env: Env = Env()
     env.read_env(path)
-    return Config(tg_bot=TgBot(token=env('BOT_TOKEN')))
+    return Config(tg_bot=TgBot(token=env('BOT_TOKEN'),
+                               admin_id=env('ADMIN_ID')))

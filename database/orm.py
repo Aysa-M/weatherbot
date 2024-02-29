@@ -1,5 +1,5 @@
 # Functions for manipulations with database
-from typing import Optional
+from typing import List, Optional
 
 from .models import Base, Users, WeatherReports
 from settings.db_config import engine, Session
@@ -7,6 +7,13 @@ from settings.db_config import engine, Session
 
 Base.metadata.create_all(engine)
 SESSION = Session()
+
+
+def get_users() -> List[Users]:
+    """
+    Возвращает список всех пользователей
+    """
+    return SESSION.query(Users).all()
 
 
 def get_user(tg_id: int) -> Users | None:
@@ -86,3 +93,14 @@ def get_report_by_id(rep_id: int) -> WeatherReports | None:
     """
     return SESSION.query(WeatherReports).filter(
         WeatherReports.id == rep_id).first()
+
+
+def delete_report_by_id(rep_id: int) -> None:
+    """
+    Удаляет отчет из БД по номеру идентификатора
+    Args:
+        rep_id (int): идентификатор отчета, хранящийся в БД
+    """
+    report: WeatherReports | None = SESSION.get(WeatherReports, rep_id)
+    SESSION.delete(report)
+    SESSION.commit()

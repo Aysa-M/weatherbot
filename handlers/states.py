@@ -13,6 +13,6 @@ class ChoiceUserPlace(StatesGroup):
     """
     Класс, наследуемый от StatesGroup, для группы состояний FSM бота.
     Состояние ожидания ввода населенного пункта, который пользователь
-    устанавливает как свой
+    устанавливает по-умолчанию
     """
-    user_location = State()
+    user_location: State = State()
