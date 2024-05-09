@@ -1,3 +1,5 @@
+import json
+
 from aiogram import F, Router
 from aiogram.filters import CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -254,7 +256,8 @@ async def process_return_to_list(callback: CallbackQuery) -> None:
                          in callback_query.data)
 async def process_delete_btn_in_report(callback: CallbackQuery) -> None:
     """
-
+    Обработчик удаляет конкретный отчет из "Истории", если нажимаем на кнопку
+    "Удалить".
     Args:
         callback (CallbackQuery): _description_
     """
@@ -310,6 +313,10 @@ async def chosen_user_location(message: Message, state: FSMContext) -> None:
 @usrouter.message(lambda message: message.text in ['админ', 'admin']
                   and message.from_user.id == int(ADMIN))
 async def admin_position(message: Message) -> None:
+    """
+    Генерирует админ панель в случае, если текстовое сообщение было отправлено админом
+    и текст сообщения является 'админ' либо 'admin'
+    """
     markup: ReplyKeyboardMarkup = await keyboard.process_admin_btn()
     await message.answer(text=lexicon_ru.LEXICON_RU['admin_panel'],
                          reply_markup=markup)
@@ -317,6 +324,10 @@ async def admin_position(message: Message) -> None:
 
 @usrouter.message(F.text == lexicon_ru.LEXICON_RU['admin'])
 async def process_users_list(message: Message) -> None:
+    """
+    Формирует список пользователей бота, если отправить текстовое сообщение
+    в чат c текстом - "admin"
+    """
     markup: InlineKeyboardMarkup = await navigation.generate_users_list()
     await message.answer(text=lexicon_ru.LEXICON_RU['user_list'],
                          reply_markup=markup)

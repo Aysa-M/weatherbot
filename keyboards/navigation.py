@@ -98,7 +98,7 @@ async def reports_previous_page(current_pg: int,
 
 
 async def history_btn_inline(tg_id: int,
-                             current_pg=CONST_1) -> InlineKeyboardMarkup:
+                             current_pg: int = CONST_1) -> InlineKeyboardMarkup:
     """
     Создает меню с инлайн кнопками первой страницы списка отчетов пользователя
     Args:
@@ -111,12 +111,12 @@ async def history_btn_inline(tg_id: int,
     """
     kb_builder_rep, total_pages = await report_inline(tg_id,
                                                       current_pg)
-    await next_page(current_pg, kb_builder_rep, total_pages)
+    await reports_next_page(current_pg, kb_builder_rep, total_pages)
     return kb_builder_rep.as_markup()
 
 
 async def report_btn_inline(rep_id: str,
-                            current_pg: str) -> InlineKeyboardMarkup:
+                            current_pg: int = CONST_1) -> InlineKeyboardMarkup:
     """
     Генерирует меню с инлайн-кнопками при формировании сообщения в ответ
     на нажатие на инлайн кнопку с определенным отчетом
